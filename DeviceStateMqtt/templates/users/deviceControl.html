@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Page</title>
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f4f4f4;
+        }
+
+        footer {
+            background: #35424a;
+            color: #ffffff;
+            text-align: center;
+            padding: 10px 0;
+            position: fixed;
+            width: 100%;
+            bottom: 0;
+        }
+
+        a.logout_cls {
+            color: #d7c1c1;
+            margin-left: 15px;
+        }
+
+        .device-container {
+            margin: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .device-buttons {
+            margin-top: 10px;
+        }
+
+        button {
+            margin: 5px;
+        }
+
+        .device-list {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        button.btn.btn-primary.device-button {
+            margin: 20px;
+        }
+
+        /* Styles for on/off states */
+        .button-on {
+            background-color: #28a745; /* Green for on */
+            color: white;
+        }
+
+        .button-off {
+            background-color: #dc3545; /* Red for off */
+            color: white;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="bg-dark text-white">
+        <nav class="navbar navbar-expand-lg navbar-dark">
+            <a class="navbar-brand" href="{% url 'home' %}">My Website</a>
+            <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNav"
+                aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mr-auto">
+                    <li class="nav-item {% if request.resolver_match.url_name == 'Devices' %}active{% endif %}">
+                        <a class="nav-link" href="{% url 'Devices' %}">Devices</a>
+                    </li>
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle" href="#" id="deviceManagementDropdown" role="button"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">Device Management</a>
+                        <div class="dropdown-menu" aria-labelledby="deviceManagementDropdown">
+                            <a class="dropdown-item" href="{% url 'add_devices' %}">Add Device</a>
+                            <a class="dropdown-item" href="#">Remove Device</a>
+                        </div>
+                    </li>
+                </ul>
+                <span class="navbar-text">
+                    Hello, {{ request.user }}
+                    <a class="logout_cls" href="{% url 'logout' %}">Logout</a>
+                </span>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container mt-5">
+        <section>
+            <h1 class="text-center">Devices</h1>
+            <div class="device-list">
+                {% for device in devices %}
+                <div class="device-container">
+                    <h2>{{ device.device_name }}</h2> <!-- Device Name -->
+                    <div class="device-buttons">
+                        <!-- Generate buttons based on device.button_count -->
+                        {% for i in device.button_count %}
+                        {% csrf_token %}
+                        <button type="button" class="device-button button-off" data-device="{{ device.device_name }}"
+                            data-button-number="{{ forloop.counter }}" data-button-state="off">
+                            Button {{ forloop.counter }}
+                        </button>
+                        {% endfor %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <p>&copy; 2024 My Website</p>
+    </footer>
+
+    <!-- Bootstrap JS and dependencies -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        const buttons = document.querySelectorAll('.device-button');
+        buttons.forEach(button => {
+            button.addEventListener('click', function () {
+                const deviceName = this.getAttribute('data-device');
+                const buttonNumber = this.getAttribute('data-button-number');
+                let buttonState = this.getAttribute('data-button-state') || 'off'; // Default to 'off'
+
+                // Determine the new button state
+                buttonState = (buttonState === 'on') ? 'off' : 'on'; // Toggle between 'on' and 'off'
+                
+                // Update the button's data attribute for the next click
+                this.setAttribute('data-button-state', buttonState);
+
+                // Update the button's classes based on the state
+                if (buttonState === 'on') {
+                    this.classList.remove('button-off');
+                    this.classList.add('button-on');
+                } else {
+                    this.classList.remove('button-on');
+                    this.classList.add('button-off');
+                }
+
+                console.log(`Clicked device: ${deviceName}, button number: ${buttonNumber}, new state: ${buttonState}`);
+
+                // Perform the AJAX call
+                fetch('/DeviceStatusMqtt/handle-device-click/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/x-www-form-urlencoded', // Use the appropriate content type
+                        'X-CSRFToken': '{{ csrf_token }}',  // Ensure CSRF token is included
+                    },
+                    body: new URLSearchParams({
+                        device: deviceName,          // Use the actual device name
+                        button_number: buttonNumber,  // Use the actual button number
+                        button_state: buttonState     // Use the toggled button state
+                    }).toString()  // Serialize the data
+                })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error('Network response was not ok');
+                        }
+                        return response.json();
+                    })
+                    .then(data => {
+                        console.log(data); // Handle success
+                    })
+                    .catch(error => {
+                        console.error('Error:', error); // Handle error
+                    });
+            });
+        });
+    </script>
+</body>
+
+</html>
