@@ -10,7 +10,7 @@ from django.views.decorators.csrf import csrf_exempt
 from .forms import CreateUserForm
 
 # Create your views here.
-@login_required(login_url='login')
+# @login_required(login_url='login')
 def home(request):
     return render(request,"startbootstrap/index.html")
 
