@@ -1,0 +1,13 @@
+{
+    "builds": [{
+        "src": "IotHome/wsgi.py",
+        "use": "@vercel/python",
+        "config": { "maxLambdaSize": "15mb", "runtime": "python3.12.4" }
+    }],
+    "routes": [
+        {
+            "src": "/(.*)",
+            "dest": "IotHome/wsgi.py"
+        }
+    ]
+}
