@@ -31,6 +31,8 @@ DEBUG = True
 # ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'iothome.loca.lt']
 
 ALLOWED_HOSTS = ['.vercel.app']
+CSRF_TRUSTED_ORIGINS = ['https://iothome-two.vercel.app/']  # Replace with actual domain
+
 
 CSRF_TRUSTED_ORIGINS = [
     'https://iothome.loca.lt',
